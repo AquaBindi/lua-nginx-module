@@ -54,7 +54,7 @@ ngx_http_lua_body_filter_by_lua_env(lua_State *L, ngx_http_request_t *r,
     /*  set nginx request pointer to current lua thread's globals table */
     ngx_http_lua_set_req(L, r);
 
-    lua_pushlightuserdata(L, in);
+    ngx_http_lua_push_47bit_lightud(L, in);
     lua_setglobal(L, ngx_http_lua_chain_key);
 
     /**
@@ -625,7 +625,7 @@ done:
         }
     }
 
-    lua_pushlightuserdata(L, cl);
+    ngx_http_lua_push_47bit_lightud(L, cl);
     lua_setglobal(L, ngx_http_lua_chain_key);
     return 0;
 }

@@ -256,7 +256,7 @@ ngx_http_lua_ngx_timer_helper(lua_State *L, int every)
 
     /* co stack: func */
 
-    lua_pushlightuserdata(L, &ngx_http_lua_coroutines_key);
+    ngx_http_lua_push_47bit_lightud(L, &ngx_http_lua_coroutines_key);
     lua_rawget(L, LUA_REGISTRYINDEX);
 
     /* L stack: time func [args] thread coroutines */
@@ -358,7 +358,7 @@ nomem:
         ngx_free(ev);
     }
 
-    lua_pushlightuserdata(L, &ngx_http_lua_coroutines_key);
+    ngx_http_lua_push_47bit_lightud(L, &ngx_http_lua_coroutines_key);
     lua_rawget(L, LUA_REGISTRYINDEX);
     luaL_unref(L, -1, co_ref);
 
@@ -423,7 +423,7 @@ ngx_http_lua_timer_copy(ngx_http_lua_timer_ctx_t *old_tctx)
 
     /* co stack: func */
 
-    lua_pushlightuserdata(L, &ngx_http_lua_coroutines_key);
+    ngx_http_lua_push_47bit_lightud(L, &ngx_http_lua_coroutines_key);
     lua_rawget(L, LUA_REGISTRYINDEX);
 
     /* L stack: func [args] thread coroutines */
@@ -512,7 +512,7 @@ nomem:
 
     /* L stack: func [args] */
 
-    lua_pushlightuserdata(L, &ngx_http_lua_coroutines_key);
+    ngx_http_lua_push_47bit_lightud(L, &ngx_http_lua_coroutines_key);
     lua_rawget(L, LUA_REGISTRYINDEX);
     luaL_unref(L, -1, co_ref);
 
@@ -692,7 +692,7 @@ ngx_http_lua_timer_handler(ngx_event_t *ev)
 failed:
 
     if (tctx.co_ref && tctx.co) {
-        lua_pushlightuserdata(tctx.co, &ngx_http_lua_coroutines_key);
+        ngx_http_lua_push_47bit_lightud(tctx.co, &ngx_http_lua_coroutines_key);
         lua_rawget(tctx.co, LUA_REGISTRYINDEX);
         luaL_unref(tctx.co, -1, tctx.co_ref);
         lua_settop(tctx.co, 0);

@@ -119,6 +119,12 @@ ngx_http_lua_ffi_check_context(ngx_http_lua_ctx_t *ctx, unsigned flags,
         return luaL_error(L, "API disabled in the current context");         \
     }
 
+static ngx_inline void
+ngx_http_lua_push_47bit_lightud(lua_State *L, void *ptr)
+{
+    lua_pushlightuserdata(L, (void *) ((uint64_t) ptr & ((1ULL << 47) - 1)));
+}
+
 
 #define ngx_http_lua_check_fake_request2(L, r, ctx)                          \
     if ((r)->connection->fd == (ngx_socket_t) -1) {                          \
@@ -347,7 +353,7 @@ ngx_http_lua_get_req(lua_State *L)
 static ngx_inline void
 ngx_http_lua_set_req(lua_State *L, ngx_http_request_t *r)
 {
-    lua_pushlightuserdata(L, r);
+    ngx_http_lua_push_47bit_lightud(L, r);
     lua_setglobal(L, ngx_http_lua_req_key);
 }
 

@@ -184,7 +184,7 @@ ngx_http_lua_set_by_lua_env(lua_State *L, ngx_http_request_t *r, size_t nargs,
     lua_pushinteger(L, nargs);
     lua_setglobal(L, ngx_http_lua_nargs_key);
 
-    lua_pushlightuserdata(L, args);
+    ngx_http_lua_push_47bit_lightud(L, args);
     lua_setglobal(L, ngx_http_lua_args_key);
 
     /**
