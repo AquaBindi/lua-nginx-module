@@ -2602,14 +2602,14 @@ SSL session resumption can then get immediately initiated and bypass the full SS
 Please note that TLS session tickets are very different and it is the clients' responsibility
 to cache the SSL session state when session tickets are used. SSL session resumptions based on
 TLS session tickets would happen automatically without going through this hook (nor the
-[ssl_session_store_by_lua_block](#ssl_session_store_by_lua) hook). This hook is mainly
+[ssl_session_store_by_lua*](#ssl_session_store_by_lua_block) hook). This hook is mainly
 for older or less capable SSL clients that can only do SSL sessions by session IDs.
 
 When [ssl_certificate_by_lua*](#ssl_certificate_by_lua_block) is specified at the same time,
 this hook usually runs before [ssl_certificate_by_lua*](#ssl_certificate_by_lua_block).
 When the SSL session is found and successfully loaded for the current SSL connection,
 SSL session resumption will happen and thus bypass the [ssl_certificate_by_lua*](#ssl_certificate_by_lua_block)
-hook completely. In this case, NGINX also bypasses the [ssl_session_store_by_lua_block](#ssl_session_store_by_lua)
+hook completely. In this case, NGINX also bypasses the [ssl_session_store_by_lua*](#ssl_session_store_by_lua_block)
 hook, for obvious reasons.
 
 To easily test this hook locally with a modern web browser, you can temporarily put the following line
@@ -3221,6 +3221,7 @@ Nginx API for Lua
 * [tcpsock:sslhandshake](#tcpsocksslhandshake)
 * [tcpsock:send](#tcpsocksend)
 * [tcpsock:receive](#tcpsockreceive)
+* [tcpsock:receiveany](#tcpsockreceiveany)
 * [tcpsock:receiveuntil](#tcpsockreceiveuntil)
 * [tcpsock:close](#tcpsockclose)
 * [tcpsock:settimeout](#tcpsocksettimeout)
@@ -4887,7 +4888,7 @@ This function returns `nil` if
 1. the request body has been read into disk temporary files,
 1. or the request body has zero size.
 
-If the request body has not been read yet, call [ngx.req.read_body](#ngxreqread_body) first (or turned on [lua_need_request_body](#lua_need_request_body) to force this module to read the request body. This is not recommended however).
+If the request body has not been read yet, call [ngx.req.read_body](#ngxreqread_body) first (or turn on [lua_need_request_body](#lua_need_request_body) to force this module to read the request body. This is not recommended however).
 
 If the request body has been read into disk files, try calling the [ngx.req.get_body_file](#ngxreqget_body_file) function instead.
 
@@ -4911,7 +4912,7 @@ Retrieves the file name for the in-file request body data. Returns `nil` if the 
 
 The returned file is read only and is usually cleaned up by Nginx's memory pool. It should not be manually modified, renamed, or removed in Lua code.
 
-If the request body has not been read yet, call [ngx.req.read_body](#ngxreqread_body) first (or turned on [lua_need_request_body](#lua_need_request_body) to force this module to read the request body. This is not recommended however).
+If the request body has not been read yet, call [ngx.req.read_body](#ngxreqread_body) first (or turn on [lua_need_request_body](#lua_need_request_body) to force this module to read the request body. This is not recommended however).
 
 If the request body has been read into memory, try calling the [ngx.req.get_body_data](#ngxreqget_body_data) function instead.
 
@@ -4931,7 +4932,9 @@ ngx.req.set_body_data
 
 Set the current request's request body using the in-memory data specified by the `data` argument.
 
-If the current request's request body has not been read, then it will be properly discarded. When the current request's request body has been read into memory or buffered into a disk file, then the old request body's memory will be freed or the disk file will be cleaned up immediately, respectively.
+If the request body has not been read yet, call [ngx.req.read_body](#ngxreqread_body) first (or turn on [lua_need_request_body](#lua_need_request_body) to force this module to read the request body. This is not recommended however). Additionally, the request body must not have been previously discarded by [ngx.req.discard_body](#ngxreqdiscard_body).
+
+Whether the previous request body has been read into memory or buffered into a disk file, it will be freed or the disk file will be cleaned up immediately, respectively.
 
 This function was first introduced in the `v0.3.1rc18` release.
 
@@ -4947,11 +4950,13 @@ ngx.req.set_body_file
 
 Set the current request's request body using the in-file data specified by the `file_name` argument.
 
+If the request body has not been read yet, call [ngx.req.read_body](#ngxreqread_body) first (or turn on [lua_need_request_body](#lua_need_request_body) to force this module to read the request body. This is not recommended however). Additionally, the request body must not have been previously discarded by [ngx.req.discard_body](#ngxreqdiscard_body).
+
 If the optional `auto_clean` argument is given a `true` value, then this file will be removed at request completion or the next time this function or [ngx.req.set_body_data](#ngxreqset_body_data) are called in the same request. The `auto_clean` is default to `false`.
 
 Please ensure that the file specified by the `file_name` argument exists and is readable by an Nginx worker process by setting its permission properly to avoid Lua exception errors.
 
-If the current request's request body has not been read, then it will be properly discarded. When the current request's request body has been read into memory or buffered into a disk file, then the old request body's memory will be freed or the disk file will be cleaned up immediately, respectively.
+Whether the previous request body has been read into memory or buffered into a disk file, it will be freed or the disk file will be cleaned up immediately, respectively.
 
 This function was first introduced in the `v0.3.1rc18` release.
 
@@ -7002,6 +7007,7 @@ Creates and returns a TCP or stream-oriented unix domain socket object (also kno
 * [settimeout](#tcpsocksettimeout)
 * [settimeouts](#tcpsocksettimeouts)
 * [setoption](#tcpsocksetoption)
+* [receiveany](#tcpsockreceiveany)
 * [receiveuntil](#tcpsockreceiveuntil)
 * [setkeepalive](#tcpsocksetkeepalive)
 * [getreusedtimes](#tcpsockgetreusedtimes)
@@ -7228,6 +7234,40 @@ It is important here to call the [settimeout](#tcpsocksettimeout) method *before
 Since the `v0.8.8` release, this method no longer automatically closes the current connection when the read timeout error happens. For other connection errors, this method always automatically closes the connection.
 
 This feature was first introduced in the `v0.5.0rc1` release.
+
+[Back to TOC](#nginx-api-for-lua)
+
+tcpsock:receiveany
+------------------
+**syntax:** *data, err = tcpsock:receiveany(max)*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, ngx.timer.&#42;, ssl_certificate_by_lua&#42;, ssl_session_fetch_by_lua&#42;*
+
+Returns any data received by the connected socket, at most `max` bytes.
+
+This method is a synchronous operation just like the [send](#tcpsocksend) method and is 100% nonblocking.
+
+In case of success, it returns the data received; in case of error, it returns `nil` with a string describing the error.
+
+If the received data is more than this size, this method will return with exactly this size of data.
+The remaining data in the underlying receive buffer could be returned in the next reading operation.
+
+Timeout for the reading operation is controlled by the [lua_socket_read_timeout](#lua_socket_read_timeout) config directive and the [settimeouts](#tcpsocksettimeouts) method. And the latter takes priority. For example:
+
+```lua
+
+ sock:settimeouts(1000, 1000, 1000)  -- one second timeout for connect/read/write
+ local data, err = sock:receiveany(10 * 1024 * 1024) -- read any data, at most 10K
+ if not data then
+     ngx.say("failed to read any data: ", err)
+     return
+ end
+ ngx.say("successfully read: ", data)
+```
+
+This method doesn't automatically close the current connection when the read timeout error occurs. For other connection errors, this method always automatically closes the connection.
+
+This feature was first introduced in the `v0.10.14` release.
 
 [Back to TOC](#nginx-api-for-lua)
 
@@ -8181,7 +8221,7 @@ This Lua module does not ship with this ngx_lua module itself rather it is shipp
 the
 [lua-resty-core](https://github.com/openresty/lua-resty-core) library.
 
-Please refer to the [documentation](https://github.com/openresty/lua-resty-core/blob/ocsp-cert-by-lua-2/lib/ngx/ocsp.md)
+Please refer to the [documentation](https://github.com/openresty/lua-resty-core/blob/master/lib/ngx/ocsp.md)
 for this `ngx.ocsp` Lua module for more details.
 
 This feature requires at least ngx_lua `v0.10.0`.
